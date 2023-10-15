@@ -3,32 +3,51 @@
 #include <3ds.h>
 #include <otp.hpp>
 #include <base32.hpp>
+#include <camera.hpp>
+
+template<int width, int height>
+void writeToFramebuffer(uint8_t* fb, std::span<uint8_t> pic) {
+	for(int j = 0; j < height; ++j) {
+		for(int i = 0; i < width; ++i) {
+			int fbIdx = (i*height + (height - j)) * 3;
+			int dataIdx = j*width + i;
+			// show grayscale image by repeating same value for r, g, b
+			fb[fbIdx] = pic[dataIdx];
+			fb[fbIdx + 1] = pic[dataIdx];
+			fb[fbIdx + 2] = pic[dataIdx];
+		}
+	}
+}
 
 int main(int argc, char* argv[])
 {
 	gfxInitDefault();
-	consoleInit(GFX_TOP, NULL);
+	gfxSet3D(false);
+	consoleInit(GFX_BOTTOM, NULL);
 
 	std::cout << "Hello, world!" << std::endl;
 
-	// test case from https://github.com/hectorm/otpauth/blob/66c70a31bd775248d9159620ca37110e471372e6/test/test.mjs#L178
-	// used under MIT license https://github.com/hectorm/otpauth/blob/master/LICENSE.md
-	auto secret = decode_base32("OR6O5BU2ZCD6PPEJ6OB2LKW5SXUZ7LJM6KS3ND7PX664ZOTWZOY6JJN24KX3N2FPVPT3BA7RXO6ISLJN26MOLF4O6GDK3AHTQ6S3XY4PW7UITDRA6OUZPCGVU7Z2HHE34KL2G");
-
-	std::cout << "totp: got " << totp(secret, 1451606400)  << ", expected 329537" << std::endl;
-	std::cout << "hotp: got " << hotp(secret, 10000000000) << ", expected 361593" << std::endl;
+	Camera camera;
+	std::vector<uint8_t> camBuf(Camera::WIDTH * Camera::HEIGHT, '\0');
 
 	// Main loop
 	while (aptMainLoop())
 	{
+		hidScanInput();
+		u32 kDown = hidKeysDown();
+		if (kDown & KEY_START) {
+			break; // break in order to return to hbmenu
+		}
+
+		camera.startNextCapture();
+		if (camera.getFrame(camBuf)) {
+			uint8_t* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
+			writeToFramebuffer<Camera::WIDTH, Camera::HEIGHT>(framebuffer, camBuf);
+		}
+
 		gspWaitForVBlank();
 		gfxSwapBuffers();
-		hidScanInput();
-
-		// Your code goes here
-		u32 kDown = hidKeysDown();
-		if (kDown & KEY_START)
-			break; // break in order to return to hbmenu
+		gfxFlushBuffers();
 	}
 
 	gfxExit();
