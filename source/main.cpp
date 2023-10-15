@@ -4,6 +4,7 @@
 #include <otp.hpp>
 #include <base32.hpp>
 #include <camera.hpp>
+#include <qr.hpp>
 
 template<int width, int height>
 void writeToFramebuffer(uint8_t* fb, std::span<uint8_t> pic) {
@@ -28,7 +29,10 @@ int main(int argc, char* argv[])
 	std::cout << "Hello, world!" << std::endl;
 
 	Camera camera;
+	QRDecoder qrdecoder(Camera::WIDTH, Camera::HEIGHT);
 	std::vector<uint8_t> camBuf(Camera::WIDTH * Camera::HEIGHT, '\0');
+
+	int frameCounter = 0;
 
 	// Main loop
 	while (aptMainLoop())
@@ -43,6 +47,13 @@ int main(int argc, char* argv[])
 		if (camera.getFrame(camBuf)) {
 			uint8_t* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 			writeToFramebuffer<Camera::WIDTH, Camera::HEIGHT>(framebuffer, camBuf);
+			frameCounter = (frameCounter + 1) % 15;
+			if(frameCounter == 0) {
+				auto url = qrdecoder.scan(camBuf);
+				if (url.has_value()) {
+					std::cout << *url << std::endl;
+				}
+			}
 		}
 
 		gspWaitForVBlank();

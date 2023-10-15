@@ -4,7 +4,11 @@ a 3DS homebrew app to store and compute TOTPs (time-based one-time passwords). w
 
 ## building
 
-install the [devkitARM](https://devkitpro.org/wiki/Getting_Started) toolchain and the 3ds-mbedtls package for it (`sudo (dkp-)pacman -S 3ds-mbedtls`). after that, run `make`.
+note that since the QR code decoding library `quirc` is pulled in as a git submodule, you need to use `git clone --recurse-submodules git@github.com:tendstofortytwo/tick-tock-lock` to clone the repository properly.
+
+1. install the [devkitARM](https://devkitpro.org/wiki/Getting_Started) toolchain and the 3ds-mbedtls package for it (`sudo (dkp-)pacman -S 3ds-mbedtls`). 
+2. build and install `quirc` into your 3DS prefix by running `./install_quirc.sh`. this will run `sudo` to ask for root access to copy the files into the right location.
+3. run `make` to generate your `3dsx` file.
 
 ## license
 
