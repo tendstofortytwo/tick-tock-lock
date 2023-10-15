@@ -2,9 +2,11 @@
 #include <string>
 #include <3ds.h>
 #include <otp.hpp>
-#include <base32.hpp>
 #include <camera.hpp>
 #include <qr.hpp>
+#include <vector>
+#include <cstdint>
+#include <optional>
 
 template<int width, int height>
 void writeToFramebuffer(uint8_t* fb, std::span<uint8_t> pic) {
@@ -32,6 +34,8 @@ int main(int argc, char* argv[])
 	QRDecoder qrdecoder(Camera::WIDTH, Camera::HEIGHT);
 	std::vector<uint8_t> camBuf(Camera::WIDTH * Camera::HEIGHT, '\0');
 
+	std::optional<OTPAuth> details = std::nullopt;
+
 	int frameCounter = 0;
 
 	// Main loop
@@ -42,16 +46,38 @@ int main(int argc, char* argv[])
 		if (kDown & KEY_START) {
 			break; // break in order to return to hbmenu
 		}
+		if (kDown & KEY_A) {
+			if (details.has_value()) {
+				if (details->kind == OTPAuth::HOTP) {
+					std::cout << zeroPadOTP(hotp(details->secret, details->counter)) << std::endl;
+					details->counter++;
+				}
+				if (details->kind == OTPAuth::TOTP) {
+					std::cout << zeroPadOTP(totp(details->secret)) << std::endl;
+					std::cout << "valid for " << totpValidity() << " seconds!" << std::endl;
+				}
+			}
+		}
+		if (kDown & KEY_B) {
+			details = std::nullopt;
+		}
 
 		camera.startNextCapture();
 		if (camera.getFrame(camBuf)) {
 			uint8_t* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 			writeToFramebuffer<Camera::WIDTH, Camera::HEIGHT>(framebuffer, camBuf);
 			frameCounter = (frameCounter + 1) % 15;
-			if(frameCounter == 0) {
-				auto url = qrdecoder.scan(camBuf);
-				if (url.has_value()) {
-					std::cout << *url << std::endl;
+			if(frameCounter == 0 && !details.has_value()) {
+				details = qrdecoder.scan(camBuf).and_then(parseOTPAuthURL);
+				if (details.has_value()) {
+					std::cout << "kind: " << OTPAuthKind(details->kind) << std::endl;
+					std::cout << "label: " << details->label << std::endl;
+					if (details->kind == OTPAuth::HOTP) {
+						std::cout << "counter: " << details->counter << std::endl;
+					}
+					std::cout << "stored details!" << std::endl;
+					std::cout << "press A to generate next OTP" << std::endl;
+					std::cout << "press B to clear OTP details" << std::endl;
 				}
 			}
 		}

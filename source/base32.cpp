@@ -56,7 +56,7 @@ void append_bytes(std::vector<unsigned char>& res, uint64_t bits, int count) {
 	}
 }
 
-std::vector<unsigned char> decode_base32(const std::string &s) {
+std::vector<unsigned char> decode_base32(std::string_view s) {
 	std::vector<unsigned char> res;
 	uint64_t bits = 0;
 	size_t blank_count = 0;

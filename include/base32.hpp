@@ -2,8 +2,8 @@
 #define TTC_BASE32_H
 
 #include <vector>
-#include <string>
+#include <string_view>
 
-std::vector<unsigned char> decode_base32(const std::string& s);
+std::vector<unsigned char> decode_base32(std::string_view s);
 
 #endif
